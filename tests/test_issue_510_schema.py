@@ -26,7 +26,6 @@ class TestSchemaConsolidation(unittest.TestCase):
 
     def test_tables_created_on_create_db(self):
         from truememory.storage import create_db
-        import sqlite3
         conn = create_db(":memory:")
         tables = {
             row[0] for row in conn.execute(

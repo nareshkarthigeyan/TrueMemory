@@ -4,7 +4,6 @@ Entity profiles, style vectors, and relationships all use .lower() for
 delete cleanup but summaries did not, leaving orphaned summary rows.
 """
 
-import sqlite3
 import unittest
 
 
@@ -12,7 +11,8 @@ class TestDeleteAllSummaryCaseNormalization(unittest.TestCase):
 
     def _make_engine(self):
         from truememory.engine import TrueMemoryEngine
-        import tempfile, os
+        import tempfile
+        import os
         tmp = tempfile.mkdtemp()
         db_path = os.path.join(tmp, "test.db")
         e = TrueMemoryEngine(db_path=db_path)

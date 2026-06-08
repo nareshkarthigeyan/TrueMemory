@@ -26,7 +26,8 @@ class TestM17DtypeWhitelist(unittest.TestCase):
 
     def test_accepts_float32(self):
         from truememory.model_server import _json_object_hook
-        import base64, struct
+        import base64
+        import struct
         data = struct.pack("f", 1.0)
         obj = {
             "__ndarray__": base64.b64encode(data).decode(),

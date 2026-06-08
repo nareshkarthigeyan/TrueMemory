@@ -10,9 +10,11 @@ import time
 from unittest.mock import patch, MagicMock
 
 import numpy as np
-import pytest
+
+from tests.conftest import requires_sqlite_ext
 
 
+@requires_sqlite_ext
 class TestIssue468EmbedLockScope:
     """Verify embedding is computed outside the write lock."""
 

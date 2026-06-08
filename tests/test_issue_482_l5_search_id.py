@@ -5,9 +5,7 @@ an 'id' key, causing engine.py to silently discard all L5 results.
 """
 from __future__ import annotations
 
-import sqlite3
 
-import pytest
 
 from truememory.consolidation import search_contradictions, search_consolidated
 from truememory.storage import create_db

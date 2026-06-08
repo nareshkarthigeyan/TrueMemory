@@ -768,6 +768,8 @@ def truememory_get(memory_id: int) -> str:
     Args:
         memory_id: The integer ID of the memory to retrieve.
     """
+    if not isinstance(memory_id, int) or isinstance(memory_id, bool):
+        return json.dumps({"error": "memory_id must be an integer"})
     m = _get_memory()
     result = m.get(memory_id)
     if result is None:
@@ -905,7 +907,7 @@ def truememory_configure(
         config[f"{api_provider}_api_key"] = api_key
 
     # Store email for telemetry registration
-    if email and email.strip():
+    if email and email.strip() and len(email.strip()) <= 256:
         config["email"] = email.strip()
         try:
             from truememory import telemetry
@@ -1098,6 +1100,11 @@ def truememory_entity_profile(entity: str) -> str:
     Args:
         entity: Name of the person/entity to look up.
     """
+    if not entity or not entity.strip():
+        return json.dumps({"error": "entity name is required"})
+    entity = entity.strip()
+    if len(entity) > 256:
+        return json.dumps({"error": "entity name too long (max 256 chars)"})
     m = _get_memory()
     m._engine._ensure_connection()
 

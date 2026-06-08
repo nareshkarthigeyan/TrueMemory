@@ -62,7 +62,7 @@ class TestIssue461StaleLock:
 
     def test_issue_461_spawn_lock_validates_pid(self):
         """spawn_gate lock should also write and validate PID."""
-        from truememory.hooks.core import spawn_gate, SPAWN_LOCK_PATH
+        from truememory.hooks.core import spawn_gate
 
         with tempfile.TemporaryDirectory() as tmpdir:
             test_lock = Path(tmpdir) / ".spawn.lock"
@@ -71,7 +71,7 @@ class TestIssue461StaleLock:
                 patch("truememory.hooks.core.SPAWN_LOCK_PATH", test_lock),
                 patch("truememory.hooks.core.SPAWN_PIDS_PATH", test_pids),
             ):
-                with spawn_gate() as allowed:
+                with spawn_gate():
                     pass
 
     def test_issue_461_lock_ttl_expires_old_locks(self):

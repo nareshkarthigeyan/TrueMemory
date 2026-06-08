@@ -10,7 +10,6 @@ import json
 from unittest.mock import patch, MagicMock
 
 import numpy as np
-import pytest
 
 
 class TestIssue463HydeTierGate:

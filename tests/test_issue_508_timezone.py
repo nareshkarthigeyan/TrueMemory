@@ -5,7 +5,6 @@ while Z-suffixed ones become naive after the strip logic, causing TypeError
 on comparison.
 """
 
-import sqlite3
 import unittest
 
 

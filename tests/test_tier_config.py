@@ -2,13 +2,9 @@
 
 from __future__ import annotations
 
-import os
 import pytest
 
 from truememory.tier_config import (
-    TIERS,
-    MODEL_DIMS,
-    MODEL_TO_GROUP,
     VALID_TIER_GROUPS,
     get_tier_config,
     get_embed_model,

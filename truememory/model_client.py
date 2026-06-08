@@ -184,6 +184,8 @@ def _server_ready() -> bool:
 
 def _start_server() -> bool:
     """Start the model server as a detached subprocess."""
+    if os.environ.get("TRUEMEMORY_NO_MODEL_SERVER", "") == "1":
+        return False
     _TRUEMEMORY_DIR.mkdir(parents=True, exist_ok=True)
 
     alive = _server_is_alive()

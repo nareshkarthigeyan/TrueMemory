@@ -7,7 +7,6 @@ in both entity_profiles and entity_style_vectors.
 """
 from __future__ import annotations
 
-import json
 import sqlite3
 
 import numpy as np

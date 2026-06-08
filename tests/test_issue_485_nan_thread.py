@@ -22,6 +22,8 @@ from unittest.mock import patch, MagicMock
 import numpy as np
 import pytest
 
+from tests.conftest import requires_sqlite_ext
+
 
 def _make_mock_model():
     """Return a mock embedding model that produces valid 256-d vectors."""
@@ -57,6 +59,7 @@ def _clear_nan_flag(db_path: Path) -> None:
     conn.close()
 
 
+@requires_sqlite_ext
 class TestIssue485NanFlagAfterCompletion:
     """qwen3_nan_fix_applied must only be set AFTER successful re-embed."""
 
@@ -112,6 +115,7 @@ class TestIssue485NanFlagAfterCompletion:
             )
 
 
+@requires_sqlite_ext
 class TestIssue485ThreadFailureAllowsRetry:
     """A failed background thread must NOT set the flag, so next init retries."""
 
@@ -158,6 +162,7 @@ class TestIssue485ThreadFailureAllowsRetry:
             )
 
 
+@requires_sqlite_ext
 class TestIssue499NanThreadLoadsSqliteVec:
     """Background thread must load sqlite-vec before calling build_vectors."""
 

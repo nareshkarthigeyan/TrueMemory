@@ -5,12 +5,10 @@ features that were previously only available via ingest().
 """
 from __future__ import annotations
 
-import sqlite3
 import tempfile
 import os
 from unittest.mock import patch, MagicMock
 
-import pytest
 
 from truememory.engine import TrueMemoryEngine
 from truememory.storage import create_db

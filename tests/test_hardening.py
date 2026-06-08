@@ -10,11 +10,9 @@ These tests verify behavior under adversarial conditions:
 from __future__ import annotations
 
 import os
-import sqlite3
 import tempfile
 import threading
-import time
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import pytest
 
@@ -40,6 +38,7 @@ def _make_engine(n_messages=0, consolidation=False, vectors=False):
     eng._ensure_connection()
     eng._has_consolidation = consolidation
     eng._has_vectors = vectors
+    eng._has_hybrid = vectors
     eng._has_style_vec = False
     return eng, td
 
@@ -120,7 +119,7 @@ class TestEdgeCaseInputs:
         eng, td = _make_engine()
         unicode_content = "Hello 你好 مرحبا 🎉 \x00 \ud800"
         try:
-            result = eng.add(content=unicode_content, sender="alice")
+            eng.add(content=unicode_content, sender="alice")
         except Exception:
             pass
         eng.close()

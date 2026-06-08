@@ -15,10 +15,9 @@
 from __future__ import annotations
 
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import datetime
 from unittest.mock import patch
 
-import pytest
 
 from truememory.temporal import detect_temporal_intent, parse_date_reference
 from truememory.fts_search import search_fts_in_range

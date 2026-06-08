@@ -123,7 +123,7 @@ class TestSentinelPreventsDoubleWrap:
             "TRUEMEMORY_INSTRUMENTATION": "1",
             "TRUEMEMORY_INSTRUMENTATION_DB": db_path,
         }):
-            from truememory.instrumentation.patch import install, uninstall, _install_lock, _WRAPPED_SENTINEL
+            from truememory.instrumentation.patch import install, _WRAPPED_SENTINEL
             from truememory.instrumentation import patch as inst_patch
             from truememory.instrumentation import writer
             from truememory.instrumentation.log import _lock_enabled

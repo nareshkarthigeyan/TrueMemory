@@ -12,9 +12,11 @@ import time
 from unittest.mock import patch, MagicMock
 
 import numpy as np
-import pytest
+
+from tests.conftest import requires_sqlite_ext
 
 
+@requires_sqlite_ext
 class TestIssue465Qwen3NanAsync:
     """Verify NaN fix doesn't block MCP startup."""
 
@@ -37,7 +39,7 @@ class TestIssue465Qwen3NanAsync:
 
         start = time.monotonic()
         with patch("truememory.vector_search.get_model", return_value=mock_model):
-            m = Memory(path=":memory:")
+            Memory(path=":memory:")
         elapsed = time.monotonic() - start
 
         assert elapsed < 2.0, (
@@ -79,7 +81,6 @@ class TestIssue465Qwen3NanAsync:
                 m1.add(content="first", user_id="alice")
 
             encode_count = [0]
-            original_encode = mock_model.encode
 
             def counting_encode(texts, **kw):
                 encode_count[0] += 1
@@ -92,7 +93,7 @@ class TestIssue465Qwen3NanAsync:
             start = time.monotonic()
             with patch("truememory.vector_search.get_model", return_value=mock_model):
                 with patch("truememory.vector_search._model", None):
-                    m2 = Memory(path=str(db_path))
+                    Memory(path=str(db_path))
             elapsed = time.monotonic() - start
 
             assert elapsed < 2.0, (

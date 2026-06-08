@@ -5,11 +5,9 @@ The truememory_consolidate tool fills the gap by rebuilding L2-L5 layers.
 """
 from __future__ import annotations
 
-import sqlite3
 from unittest.mock import patch, MagicMock
 
 import numpy as np
-import pytest
 
 
 class TestIssue455ConsolidationMCP:
@@ -67,7 +65,6 @@ class TestIssue455ConsolidationMCP:
     def test_issue_455_consolidate_populates_tables(self):
         """After calling consolidate, at least one L5 table should have data."""
         m = self._make_engine_with_messages(10)
-        conn = m._engine.conn
 
         from truememory.mcp_server import truememory_consolidate
 

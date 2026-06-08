@@ -117,7 +117,7 @@ class TestModelServerMpsRestore(unittest.TestCase):
         """H4: After CPU fallback, model should be moved back to MPS."""
         import inspect
         from truememory import model_server
-        source = inspect.getsource(model_server)
+        inspect.getsource(model_server)
         handler_source = inspect.getsource(model_server.ModelServer.handle_request)
         # After model.to("cpu") there should be model.to("mps")
         cpu_idx = handler_source.find('model.to("cpu")')

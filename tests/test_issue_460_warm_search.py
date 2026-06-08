@@ -13,9 +13,11 @@ from __future__ import annotations
 from unittest.mock import patch, MagicMock
 
 import numpy as np
-import pytest
+
+from tests.conftest import requires_sqlite_ext
 
 
+@requires_sqlite_ext
 class TestIssue460WarmSearch:
     """Verify embedder metadata is written after embed_single."""
 
@@ -48,7 +50,7 @@ class TestIssue460WarmSearch:
 
     def test_issue_460_no_reembed_on_warm_connect(self):
         """Second engine connecting to same DB must NOT trigger re-embed."""
-        import tempfile, sqlite3
+        import tempfile
         from pathlib import Path
         from truememory.client import Memory
         from truememory.vector_search import _read_embedder_metadata
@@ -67,7 +69,6 @@ class TestIssue460WarmSearch:
             assert stored_model is not None, "metadata should be set after add()"
 
             encode_call_count = [0]
-            original_encode = mock_model.encode
 
             def counting_encode(texts, **kw):
                 encode_call_count[0] += len(texts)

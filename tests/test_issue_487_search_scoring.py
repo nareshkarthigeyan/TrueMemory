@@ -12,12 +12,10 @@ Issue #488 (H2): Salience filtering happens BEFORE entity boosting.
 """
 from __future__ import annotations
 
-import pytest
 
 from truememory.salience import (
     apply_salience_guard,
     filter_by_entity,
-    filter_by_salience,
 )
 
 
@@ -162,7 +160,7 @@ class TestIssue488SalienceFilterOrder:
 
         # apply_salience_guard should detect "jordan" in the query,
         # and the entity boost should rescue jordan's low-salience message
-        filtered = apply_salience_guard(
+        apply_salience_guard(
             results, "What did Jordan say?", conn=None, min_salience=0.10,
         )
 

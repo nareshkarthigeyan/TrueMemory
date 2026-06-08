@@ -23,8 +23,31 @@ Two autouse fixtures restore determinism without weakening any assertion:
 from __future__ import annotations
 
 import os
+import sqlite3
 
 import pytest
+
+
+def _can_load_sqlite_vec() -> bool:
+    """True if sqlite-vec can be loaded into a connection."""
+    conn = sqlite3.connect(":memory:")
+    try:
+        conn.enable_load_extension(True)
+        import sqlite_vec
+        sqlite_vec.load(conn)
+        return True
+    except (AttributeError, ImportError, OSError):
+        return False
+    finally:
+        conn.close()
+
+
+can_load_extensions = _can_load_sqlite_vec()
+
+requires_sqlite_ext = pytest.mark.skipif(
+    not can_load_extensions,
+    reason="sqlite-vec not available (missing enable_load_extension or sqlite_vec package)",
+)
 
 
 @pytest.fixture(autouse=True)

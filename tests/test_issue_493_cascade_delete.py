@@ -10,11 +10,9 @@ and cluster_centroids so no orphaned rows remain.
 """
 from __future__ import annotations
 
-import sqlite3
 from unittest.mock import patch, MagicMock
 
 import numpy as np
-import pytest
 
 
 def _setup_memory_with_clusters():

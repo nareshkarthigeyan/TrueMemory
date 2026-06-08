@@ -6,16 +6,12 @@ on POSIX by temporarily patching _USE_UNIX to False.
 """
 from __future__ import annotations
 
-import hmac
 import os
 import pickle
 import secrets
 import socket
 import struct
-import tempfile
 import threading
-import time
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest

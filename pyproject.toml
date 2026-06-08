@@ -50,7 +50,7 @@ dashboard = [
     "uvicorn[standard]>=0.20,<1.0",
     "pywebview>=5.0,<7.0",
 ]
-dev = ["pytest>=7.0,<10.0", "ruff>=0.4,<1.0", "build>=1.2,<2.0", "twine>=5.0,<7.0"]
+dev = ["pytest>=7.0,<10.0", "pytest-timeout>=2.2,<3.0", "ruff>=0.4,<1.0", "build>=1.2,<2.0", "twine>=5.0,<7.0"]
 all = ["truememory[agentic]"]
 
 [project.scripts]
@@ -73,7 +73,7 @@ Changelog = "https://github.com/buildingjoshbetter/TrueMemory/blob/main/CHANGELO
 testpaths = ["tests"]
 # Issue #426: register custom markers and fail on typos so the gate can
 # reliably exclude network/model-download tests via `-m "not network"`.
-addopts = "--strict-markers"
+addopts = "--strict-markers --timeout=120"
 markers = [
     "network: test performs real network I/O (e.g. HuggingFace model download). Excluded from the deterministic CI gate via `-m \"not network\"`; run in a dedicated non-gating job.",
 ]
@@ -87,6 +87,8 @@ markers = [
 # inside the file itself — but they ARE the file's purpose. Standard
 # idiom is to ignore F401 for __init__ modules.
 "__init__.py" = ["F401"]
+"truememory/reranker.py" = ["E402"]
+"truememory/vector_search.py" = ["E402"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["truememory"]

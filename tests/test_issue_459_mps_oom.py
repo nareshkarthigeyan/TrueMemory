@@ -11,6 +11,8 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
+from tests.conftest import requires_sqlite_ext
+
 
 def _make_mps_oom_error():
     """Create a RuntimeError that looks like an MPS OOM."""
@@ -21,6 +23,7 @@ def _make_mps_oom_error():
     )
 
 
+@requires_sqlite_ext
 class TestIssue459MPSOOMFallback:
     """Verify that MPS OOM falls back to CPU instead of losing data."""
 
@@ -101,7 +104,7 @@ class TestIssue459MPSOOMFallback:
 
         with patch("truememory.vector_search.get_model", return_value=mock_model):
             try:
-                count = build_separation_vectors(conn)
+                build_separation_vectors(conn)
             except RuntimeError as e:
                 if "MPS" in str(e):
                     pytest.fail(

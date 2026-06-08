@@ -6,7 +6,6 @@ acquiring _write_lock, allowing races with concurrent add() calls.
 from __future__ import annotations
 
 import threading
-import time
 from unittest.mock import patch, MagicMock
 
 import numpy as np

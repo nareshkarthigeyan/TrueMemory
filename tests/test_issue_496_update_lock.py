@@ -6,7 +6,6 @@ then only holds _write_lock for the DB writes.
 
 import inspect
 import threading
-import time
 import unittest
 
 
@@ -35,7 +34,8 @@ class TestUpdateLockScope(unittest.TestCase):
 
     def test_update_concurrent_not_blocked_by_inference(self):
         """Two concurrent update() calls should not serialize on inference."""
-        import tempfile, os
+        import tempfile
+        import os
         from truememory.engine import TrueMemoryEngine
 
         with tempfile.TemporaryDirectory() as tmp:

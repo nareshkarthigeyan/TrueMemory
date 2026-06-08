@@ -6,11 +6,12 @@ leaving the database with no vector table and broken semantic search.
 """
 from __future__ import annotations
 
-import sqlite3
 from unittest.mock import patch, MagicMock
 
 import numpy as np
 import pytest
+
+from tests.conftest import requires_sqlite_ext
 
 
 def _has_table(conn, table_name):
@@ -22,6 +23,7 @@ def _has_table(conn, table_name):
     return row is not None
 
 
+@requires_sqlite_ext
 class TestIssue483VecMigration:
 
     def test_issue_483_fresh_db_keeps_vec_tables(self):

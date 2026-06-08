@@ -5,7 +5,6 @@ It must reject NaN and Inf values to prevent corrupted embeddings from
 entering the database.
 """
 
-import math
 import unittest
 
 import numpy as np

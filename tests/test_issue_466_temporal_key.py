@@ -8,12 +8,9 @@ meaning temporally-scoped FTS results never merge into the final results.
 from __future__ import annotations
 
 import inspect
-import sqlite3
-from datetime import datetime, timezone, timedelta
 from unittest.mock import MagicMock, patch
 
 import numpy as np
-import pytest
 
 
 class TestIssue466TemporalKeyMismatch:
@@ -120,7 +117,7 @@ class TestIssue466TemporalKeyMismatch:
         # and added the rescoped result with source="temporal_rescoped".
         # Before the fix, search_fts_in_range is never called because
         # intent.get("start_date") is always None.
-        sources = [r.get("source", "") for r in results]
+        [r.get("source", "") for r in results]
         result_ids = [r.get("id") for r in results]
 
         assert mock_fts_range.called, (
