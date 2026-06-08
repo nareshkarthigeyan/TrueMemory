@@ -223,14 +223,16 @@ def _drain_backlog() -> None:
                     _log_dir / f"{_safe_sid}.log",
                     "a", encoding="utf-8",
                 )
-                proc = subprocess.Popen(
-                    cmd,
-                    stdout=_log_file,
-                    stderr=subprocess.STDOUT,
-                    stdin=subprocess.DEVNULL,
-                    start_new_session=hasattr(os, 'setsid'),
-                )
-                _log_file.close()
+                try:
+                    proc = subprocess.Popen(
+                        cmd,
+                        stdout=_log_file,
+                        stderr=subprocess.STDOUT,
+                        stdin=subprocess.DEVNULL,
+                        start_new_session=hasattr(os, 'setsid'),
+                    )
+                finally:
+                    _log_file.close()
                 register_spawned_pid(proc.pid)
                 record_stale_processing_pid(claimed_path, proc.pid)
             # NOTE (issue #422): do NOT unlink the .processing claim here.

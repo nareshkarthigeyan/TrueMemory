@@ -357,7 +357,9 @@ class RebuildManager:
     def _apply_config_switch(
         self, target_tier: str, conn: sqlite3.Connection,
     ):
-        """Update config.json with the new tier."""
+        """Update config.json with the new tier (atomic write)."""
+        import tempfile
+
         config_path = _TRUEMEMORY_DIR / "config.json"
         config = {}
         if config_path.exists():
@@ -368,7 +370,20 @@ class RebuildManager:
 
         config["tier"] = target_tier
         config_path.parent.mkdir(parents=True, exist_ok=True)
-        config_path.write_text(json.dumps(config, indent=2))
+        fd, tmp_path = tempfile.mkstemp(
+            prefix=".config.tmp.", suffix=".json",
+            dir=str(_TRUEMEMORY_DIR),
+        )
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(config, f, indent=2)
+            os.replace(tmp_path, str(config_path))
+        except BaseException:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+            raise
 
         os.environ["TRUEMEMORY_EMBED_MODEL"] = target_tier
 

@@ -212,24 +212,30 @@ def _start_server() -> bool:
     try:
         _stderr_path = _TRUEMEMORY_DIR / "model_server.stderr"
         _stderr_fh = open(_stderr_path, "a")
-        subprocess.Popen(
-            cmd,
-            stdout=subprocess.DEVNULL,
-            stderr=_stderr_fh,
-            env=env,
-            **popen_extra,
-        )
+        try:
+            subprocess.Popen(
+                cmd,
+                stdout=subprocess.DEVNULL,
+                stderr=_stderr_fh,
+                env=env,
+                **popen_extra,
+            )
+        finally:
+            _stderr_fh.close()
     except Exception as e:
         log.warning("Failed to start model server: %s", e)
         if app_exe:
             try:
                 _stderr_fh2 = open(_stderr_path, "a")
-                subprocess.Popen(
-                    [sys.executable, "-m", "truememory.model_server"],
-                    stdout=subprocess.DEVNULL,
-                    stderr=_stderr_fh2,
-                    **popen_extra,
-                )
+                try:
+                    subprocess.Popen(
+                        [sys.executable, "-m", "truememory.model_server"],
+                        stdout=subprocess.DEVNULL,
+                        stderr=_stderr_fh2,
+                        **popen_extra,
+                    )
+                finally:
+                    _stderr_fh2.close()
             except Exception as e2:
                 log.warning("Fallback launch also failed: %s", e2)
                 return False
