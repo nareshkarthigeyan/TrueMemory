@@ -87,6 +87,9 @@ class TestIssue460WarmSearch:
                 "warm search is re-embedding all vectors due to missing metadata"
             )
 
+            m1._engine.close()
+            m2._engine.close()
+
     def test_issue_460_metadata_survives_multiple_adds(self):
         """Metadata must persist across multiple add() calls."""
         from truememory.client import Memory

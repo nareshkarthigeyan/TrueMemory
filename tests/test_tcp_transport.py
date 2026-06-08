@@ -206,8 +206,10 @@ class TestCleanup:
             srv._cleanup()
 
     def test_atomic_write_text(self, tmp_path):
+        import sys
         from truememory.model_server import ModelServer
         target = tmp_path / "test.txt"
         ModelServer._atomic_write_text(target, "hello", mode=0o600)
         assert target.read_text() == "hello"
-        assert oct(target.stat().st_mode & 0o777) == "0o600"
+        if sys.platform != "win32":
+            assert oct(target.stat().st_mode & 0o777) == "0o600"

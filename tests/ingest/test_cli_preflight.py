@@ -106,7 +106,10 @@ def test_logs_command_handles_missing_log_dir():
     # Set HOME to a temp dir so ~/.truememory/logs doesn't exist
     import tempfile
     with tempfile.TemporaryDirectory() as tmp:
-        result = _run_cli(["logs"], env={"HOME": tmp})
+        home_env = {"HOME": tmp}
+        if sys.platform == "win32":
+            home_env["USERPROFILE"] = tmp
+        result = _run_cli(["logs"], env=home_env)
         assert result.returncode == 0, f"logs crashed: {result.stderr}"
         # Should print a helpful message about no logs
         combined = result.stdout + result.stderr
@@ -117,7 +120,10 @@ def test_trace_command_handles_missing_trace_dir():
     """trace command should handle a missing trace dir gracefully."""
     import tempfile
     with tempfile.TemporaryDirectory() as tmp:
-        result = _run_cli(["trace"], env={"HOME": tmp})
+        home_env = {"HOME": tmp}
+        if sys.platform == "win32":
+            home_env["USERPROFILE"] = tmp
+        result = _run_cli(["trace"], env=home_env)
         assert result.returncode == 0, f"trace crashed: {result.stderr}"
         combined = result.stdout + result.stderr
         assert "no trace" in combined.lower()

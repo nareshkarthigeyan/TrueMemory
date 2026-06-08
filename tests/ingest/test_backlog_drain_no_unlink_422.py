@@ -21,9 +21,12 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
 import time
 from contextlib import contextmanager
 from pathlib import Path
+
+import pytest
 
 
 @contextmanager
@@ -102,6 +105,7 @@ def test_clear_backlog_processing_removes_claim_on_success(tmp_path, monkeypatch
     assert shared_mod.clear_backlog_processing("unknown") is False
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="os.kill(pid, 0) liveness check is Unix-only")
 def test_crashed_worker_is_requeued_not_dropped(monkeypatch, tmp_path):
     """End-to-end recovery: a spawned worker that exits non-zero leaves the
     .processing claim, and cleanup_stale_processing restores it to .json so the

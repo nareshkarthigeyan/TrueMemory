@@ -43,31 +43,33 @@ class TestUpdateLockScope(unittest.TestCase):
             e = TrueMemoryEngine(db_path=db_path)
             e._ensure_connection()
 
-        m1 = e.add("first message", sender="alice")
-        m2 = e.add("second message", sender="bob")
+            m1 = e.add("first message", sender="alice")
+            m2 = e.add("second message", sender="bob")
 
-        results = [None, None]
-        errors = [None, None]
+            results = [None, None]
+            errors = [None, None]
 
-        def do_update(idx, mid, text):
-            try:
-                results[idx] = e.update(mid, content=text)
-            except Exception as ex:
-                errors[idx] = ex
+            def do_update(idx, mid, text):
+                try:
+                    results[idx] = e.update(mid, content=text)
+                except Exception as ex:
+                    errors[idx] = ex
 
-        t1 = threading.Thread(target=do_update, args=(0, m1["id"], "updated first"))
-        t2 = threading.Thread(target=do_update, args=(1, m2["id"], "updated second"))
-        t1.start()
-        t2.start()
-        t1.join(timeout=10)
-        t2.join(timeout=10)
+            t1 = threading.Thread(target=do_update, args=(0, m1["id"], "updated first"))
+            t2 = threading.Thread(target=do_update, args=(1, m2["id"], "updated second"))
+            t1.start()
+            t2.start()
+            t1.join(timeout=10)
+            t2.join(timeout=10)
 
-        self.assertIsNone(errors[0], f"update 1 failed: {errors[0]}")
-        self.assertIsNone(errors[1], f"update 2 failed: {errors[1]}")
-        self.assertIsNotNone(results[0])
-        self.assertIsNotNone(results[1])
-        self.assertEqual(results[0]["content"], "updated first")
-        self.assertEqual(results[1]["content"], "updated second")
+            self.assertIsNone(errors[0], f"update 1 failed: {errors[0]}")
+            self.assertIsNone(errors[1], f"update 2 failed: {errors[1]}")
+            self.assertIsNotNone(results[0])
+            self.assertIsNotNone(results[1])
+            self.assertEqual(results[0]["content"], "updated first")
+            self.assertEqual(results[1]["content"], "updated second")
+
+            e.close()
 
 
 if __name__ == "__main__":

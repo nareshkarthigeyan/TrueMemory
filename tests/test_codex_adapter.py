@@ -156,6 +156,7 @@ def test_install_hooks_timeout_is_seconds(tmp_path, monkeypatch):
     assert "5000" not in text
 
 
+@pytest.mark.skipif(sys.version_info < (3, 11), reason="tomllib requires Python 3.11+")
 def test_install_hooks_valid_toml(tmp_path, monkeypatch):
     """The generated config must parse as valid TOML with the nested hooks structure."""
     import tomllib
@@ -235,6 +236,7 @@ def test_install_hooks_migrates_legacy_format(tmp_path, monkeypatch):
     assert "[[hooks.SessionStart.hooks]]" in text
 
 
+@pytest.mark.skipif(sys.version_info < (3, 11), reason="tomllib requires Python 3.11+")
 def test_install_mcp_and_hooks_produces_valid_toml(tmp_path, monkeypatch):
     """End-to-end: MCP + hooks together must be valid TOML."""
     import tomllib
