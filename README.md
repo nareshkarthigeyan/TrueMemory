@@ -43,7 +43,7 @@
 </p>
 
 <p align="center">
-  <a href="#the-problem">Why</a> · <a href="#quick-start">Quick Start</a> · <a href="#how-truememory-compares">Compare</a> · <a href="#tiers">Tiers</a> · <a href="#benchmarks">Benchmarks</a> · <a href="#python-api">API</a> · <a href="#docs">Docs</a> · <a href="#faq">FAQ</a>
+  <a href="#the-problem">Why</a> · <a href="#quick-start">Quick Start</a> · <a href="#how-truememory-compares">Compare</a> · <a href="#tiers">Tiers</a> · <a href="#benchmarks">Benchmarks</a> · <a href="#python-api">API</a> · <a href="#docs">Docs</a> · <a href="#faq">FAQ</a> · <a href="https://discord.gg/ZJ74JB2gVW">Discord</a>
 </p>
 
 <p align="center">
