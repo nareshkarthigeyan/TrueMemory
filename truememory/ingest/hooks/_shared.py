@@ -27,7 +27,12 @@ _STALE_PROCESSING_THRESHOLD = 1800  # 30 minutes
 # How long after SessionStart injects recall the first user prompt is treated
 # as redundant. SessionStart writes the marker just before the first prompt
 # arrives, so a short window is enough to cover that first message (issue #561).
-_RECALL_DEBOUNCE_SECONDS = float(os.environ.get("TRUEMEMORY_RECALL_DEBOUNCE_SECONDS", "60"))
+# Defensive parse: a typo in this user-facing knob must not crash every hook
+# at import time — fall back to the default instead.
+try:
+    _RECALL_DEBOUNCE_SECONDS = float(os.environ.get("TRUEMEMORY_RECALL_DEBOUNCE_SECONDS", "60"))
+except ValueError:
+    _RECALL_DEBOUNCE_SECONDS = 60.0
 
 
 def _safe_session_id(session_id: str) -> str:
@@ -267,6 +272,18 @@ def mark_recall_injected(session_id: str) -> None:
         return
     try:
         RECALL_MARKER_DIR.mkdir(parents=True, exist_ok=True)
+        # Opportunistic sweep: markers from sessions that never sent a prompt
+        # are never consumed; remove anything well past the debounce window so
+        # the dir cannot grow unboundedly (mirrors _prune_old_buffers).
+        cutoff = time.time() - max(_RECALL_DEBOUNCE_SECONDS * 10, 3600.0)
+        for stale in RECALL_MARKER_DIR.iterdir():
+            try:
+                if stale.stat().st_mtime < cutoff:
+                    stale.unlink()
+            except OSError:
+                continue
+        # Wall clock (not monotonic) on purpose: the timestamp is compared
+        # across the SessionStart and UserPromptSubmit processes.
         (RECALL_MARKER_DIR / safe_id).write_text(str(time.time()), encoding="utf-8")
     except OSError:
         pass

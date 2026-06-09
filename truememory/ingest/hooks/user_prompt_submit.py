@@ -225,6 +225,14 @@ def main():
     session_id = input_data.get("session_id", "unknown")
 
     if not prompt or len(prompt) < 3:
+        # A too-short first prompt is still the session's first prompt:
+        # consume any recall marker now so it cannot strand and debounce the
+        # next, real prompt (issue #561).
+        try:
+            from truememory.ingest.hooks._shared import consume_recall_injected
+            consume_recall_injected(session_id)
+        except Exception:
+            pass
         return
 
     try:
