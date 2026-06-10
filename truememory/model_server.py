@@ -118,6 +118,9 @@ class ModelServer:
     def __init__(self):
         self._embed_model = None
         self._embed_tier: str | None = None
+        # Actual loaded model identity (e.g. "qwen3_256") — the fast lane
+        # derives its encoder from this, not from tier defaults (issue #577).
+        self._embed_model_id: str | None = None
         self._reranker = None
         self._reranker_name: str | None = None
         self._lock = threading.Lock()
@@ -138,8 +141,10 @@ class ModelServer:
         self._sticky_cpu: set[str] = set()
         # Issue #577: dedicated CPU encoder for the single-text fast lane,
         # loaded lazily on the first *contended* single-text request.
+        # Cached by MODEL ID (not tier string) so it always tracks the main
+        # path's actual loaded identity.
         self._fast_encoder = None
-        self._fast_tier: str | None = None
+        self._fast_model_id: str | None = None
         self._fast_lock = threading.Lock()
 
     def _mark_sticky_cpu(self, kind: str) -> bool:
@@ -172,17 +177,17 @@ class ModelServer:
         return resolve_device(None)
 
     @staticmethod
-    def _resolve_embed_model_id(tier: str) -> str:
-        """Resolve a tier name to the internal embedding model ID."""
-        from truememory.vector_search import EMBEDDING_MODEL, set_embedding_model
-
-        if tier and tier != EMBEDDING_MODEL:
-            set_embedding_model(tier)
+    def _peek_embed_model_id(tier: str) -> str:
+        """Resolve a tier name to the internal embedding model ID as a PURE
+        READ — no mutation of vector_search globals (issue #577 panel: the
+        fast lane must never call ``set_embedding_model``, which force-unloads
+        the process-local model singleton and rewrites ``EMBEDDING_MODEL`` /
+        ``_embedding_dim`` while the main path may be mid-encode)."""
+        from truememory.vector_search import EMBEDDING_MODEL, _TIER_ALIASES
 
         resolved = EMBEDDING_MODEL if not tier else tier
         # Resolve tier -> internal model ID via centralized tier_config.
         # _TIER_ALIASES is still exported by vector_search for compat.
-        from truememory.vector_search import _TIER_ALIASES
         model_id = _TIER_ALIASES.get(resolved, resolved)
 
         # Custom tier: resolve via tier_config
@@ -194,6 +199,17 @@ class ModelServer:
                 log.warning("Custom tier resolution failed (%s); falling back to model2vec.", e)
                 model_id = "model2vec"
         return model_id
+
+    @staticmethod
+    def _resolve_embed_model_id(tier: str) -> str:
+        """Resolve a tier name to the internal embedding model ID, keeping
+        vector_search's globals in sync (main-path behavior, pre-#577)."""
+        from truememory.vector_search import EMBEDDING_MODEL, set_embedding_model
+
+        if tier and tier != EMBEDDING_MODEL:
+            set_embedding_model(tier)
+
+        return ModelServer._peek_embed_model_id(tier)
 
     @staticmethod
     def _build_embed_model(model_id: str, device: str | None):
@@ -242,12 +258,27 @@ class ModelServer:
             "minishlab/potion-base-8M", force_download=False
         )
 
+    # Model IDs the fast lane can rebuild with guaranteed vector-space
+    # parity: _build_embed_model constructs them deterministically with a
+    # fixed dim and no config reads. Custom models re-read config.json at
+    # build time, so a config change between the main load and the fast
+    # load could silently change the embedding dim/space — the fast lane
+    # declines those and falls through to the main path.
+    _FAST_LANE_SAFE_MODEL_IDS = frozenset(
+        {"model2vec", "minilm", "bge-small", "qwen3_256"}
+    )
+
     def _get_embed_model(self, tier: str):
         if self._embed_model is not None and self._embed_tier == tier:
             return self._embed_model
 
         model_id = self._resolve_embed_model_id(tier)
-        self._embed_model = self._build_embed_model(model_id, self._embed_device())
+        model = self._build_embed_model(model_id, self._embed_device())
+        # Write order matters for the fast lane's lock-free reads:
+        # _embed_tier is written LAST, so a matching tier implies the model
+        # and its identity are already in place.
+        self._embed_model = model
+        self._embed_model_id = model_id
         self._embed_tier = tier
         log.info("Loaded embedding model for tier=%s", tier)
         return self._embed_model
@@ -258,16 +289,36 @@ class ModelServer:
         Loaded lazily on the first single-text request that finds the global
         lock busy, then kept for the server's lifetime. Caller must hold
         ``self._fast_lock``.
+
+        Vector-space parity (issue #577 panel round 1): when the main path
+        already has a model loaded for this tier, the fast encoder is built
+        from the main path's ACTUAL loaded model identity — not from a fresh
+        tier resolution, which could drift for tier="" requests if the
+        global ``EMBEDDING_MODEL`` changed after the main load (the main
+        cache is keyed by tier string, not model ID). Returns ``None`` when
+        parity cannot be guaranteed (custom models); the caller falls
+        through to the main (locked) path.
         """
-        if self._fast_encoder is not None and self._fast_tier == tier:
+        if (
+            self._embed_model is not None
+            and self._embed_tier == tier
+            and self._embed_model_id
+        ):
+            model_id = self._embed_model_id
+        else:
+            model_id = self._peek_embed_model_id(tier)
+
+        if model_id not in self._FAST_LANE_SAFE_MODEL_IDS:
+            return None
+
+        if self._fast_encoder is not None and self._fast_model_id == model_id:
             return self._fast_encoder
 
-        model_id = self._resolve_embed_model_id(tier)
         self._fast_encoder = self._build_embed_model(model_id, "cpu")
-        self._fast_tier = tier
+        self._fast_model_id = model_id
         log.info(
-            "Fast-lane CPU encoder loaded (tier=%s) — single-text requests "
-            "no longer queue behind batch work", tier,
+            "Fast-lane CPU encoder loaded (tier=%s, model=%s) — single-text "
+            "requests no longer queue behind batch work", tier, model_id,
         )
         return self._fast_encoder
 
@@ -325,6 +376,10 @@ class ModelServer:
         try:
             with self._fast_lock:
                 model = self._get_fast_encoder(tier)
+                if model is None:
+                    # Vector-space parity with the main path cannot be
+                    # guaranteed (custom model) — decline the fast lane.
+                    return None
                 vectors = model.encode(texts, show_progress_bar=False)
             return {"ok": True, "vectors": np.asarray(vectors, dtype=np.float32)}
         except Exception:
@@ -431,14 +486,16 @@ class ModelServer:
                     # handler — a raw MPS OOM reached the client (3/3 rerank
                     # deaths in the baseline probe). Same sticky-CPU policy
                     # as embed: drop the MPS-loaded model and reload on CPU.
+                    # Mark + reload happen ATOMICALLY under this same lock
+                    # hold so the retry below always runs on the locally
+                    # reloaded CPU instance (panel round 1, item 1).
                     self._mark_sticky_cpu("rerank")
                     flush_mps_cache()
                     self._reranker = None
                     self._reranker_name = None
+                    reranker = self._get_reranker(model_name)  # sticky → CPU
                     oom = True
             if oom:
-                with self._lock:
-                    reranker = self._get_reranker(model_name)  # sticky → CPU
                 # Retry outside the lock — rerank batches are the expensive
                 # part; other clients must not starve behind the recovery.
                 scores = reranker.predict(
