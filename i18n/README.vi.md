@@ -272,6 +272,8 @@ Cau hoi? [Mo mot Cuoc thao luan](https://github.com/buildingjoshbetter/TrueMemor
     <td align="center"><a href="https://github.com/mseep-ai"><img src="https://avatars.githubusercontent.com/u/207640208?v=4" width="80" alt="mseep-ai"/><br><sub>mseep-ai</sub></a></td>
     <td align="center"><a href="https://github.com/adityajha2005"><img src="https://avatars.githubusercontent.com/u/147301021?v=4" width="80" alt="adityajha2005"/><br><sub>adityajha2005</sub></a></td>
     <td align="center"><a href="https://github.com/shivamverma1999"><img src="https://avatars.githubusercontent.com/u/33162868?v=4" width="80" alt="shivamverma1999"/><br><sub>shivamverma1999</sub></a></td>
+    <td align="center"><a href="https://github.com/Adarsh-031"><img src="https://avatars.githubusercontent.com/u/185399508?v=4" width="80" alt="Adarsh-031"/><br><sub>Adarsh-031</sub></a></td>
+    <td align="center"><a href="https://github.com/nareshkarthigeyan"><img src="https://avatars.githubusercontent.com/u/130460278?v=4" width="80" alt="nareshkarthigeyan"/><br><sub>nareshkarthigeyan</sub></a></td>
   </tr>
 </table>
 
