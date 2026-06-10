@@ -110,6 +110,10 @@ class ModelServer:
 
     _SUSTAINED_THRESHOLD = 10
     _SUSTAINED_WINDOW = 30
+    # Requests with at most this many texts take the single-text fast lane
+    # (issue #577): hook recall queries must never queue behind ingestion
+    # batches or OOM recovery.
+    _FAST_LANE_MAX_TEXTS = 1
 
     def __init__(self):
         self._embed_model = None
@@ -132,6 +136,11 @@ class ModelServer:
         # lifetime of this server process ("embed" / "rerank"). Mutated only
         # while holding self._lock; read lock-free (string membership).
         self._sticky_cpu: set[str] = set()
+        # Issue #577: dedicated CPU encoder for the single-text fast lane,
+        # loaded lazily on the first *contended* single-text request.
+        self._fast_encoder = None
+        self._fast_tier: str | None = None
+        self._fast_lock = threading.Lock()
 
     def _mark_sticky_cpu(self, kind: str) -> bool:
         """Permanently degrade *kind* ("embed"/"rerank") to CPU after an
@@ -243,6 +252,25 @@ class ModelServer:
         log.info("Loaded embedding model for tier=%s", tier)
         return self._embed_model
 
+    def _get_fast_encoder(self, tier: str):
+        """CPU-resident encoder for the single-text fast lane (issue #577).
+
+        Loaded lazily on the first single-text request that finds the global
+        lock busy, then kept for the server's lifetime. Caller must hold
+        ``self._fast_lock``.
+        """
+        if self._fast_encoder is not None and self._fast_tier == tier:
+            return self._fast_encoder
+
+        model_id = self._resolve_embed_model_id(tier)
+        self._fast_encoder = self._build_embed_model(model_id, "cpu")
+        self._fast_tier = tier
+        log.info(
+            "Fast-lane CPU encoder loaded (tier=%s) — single-text requests "
+            "no longer queue behind batch work", tier,
+        )
+        return self._fast_encoder
+
     def _get_reranker(self, model_name: str | None = None):
         from truememory.reranker import get_current_reranker_name
         name = model_name or get_current_reranker_name()
@@ -262,6 +290,50 @@ class ModelServer:
         log.info("Loaded reranker model=%s device=%s", name, device)
         return self._reranker
 
+    def _handle_fast_embed(self, texts: list, tier: str) -> dict | None:
+        """Single-text fast lane (issue #577).
+
+        Tries the main path without blocking; when the global lock is busy
+        (a batch encode or OOM recovery is in progress) the text is encoded
+        on a dedicated CPU encoder OUTSIDE the global lock, so hook recall
+        queries never wait on ingestion work. Fast-lane requests skip the
+        sustained-workload bookkeeping entirely — a burst of small hook
+        queries must not trip the throttler's batch=1 ramp (finding C-7).
+
+        Returns a response dict, or None to fall through to the normal
+        (locked) path.
+        """
+        if self._lock.acquire(blocking=False):
+            try:
+                model = self._get_embed_model(tier)
+                try:
+                    vectors = model.encode(texts, show_progress_bar=False)
+                except RuntimeError as exc:
+                    from truememory.mps_utils import is_mps_oom, flush_mps_cache
+                    if not is_mps_oom(exc):
+                        raise
+                    self._mark_sticky_cpu("embed")
+                    flush_mps_cache()
+                    if hasattr(model, "to"):
+                        model.to("cpu")
+                    # Single text on CPU is ms-scale; retry under the lock.
+                    vectors = model.encode(texts, show_progress_bar=False)
+                return {"ok": True, "vectors": np.asarray(vectors, dtype=np.float32)}
+            finally:
+                self._lock.release()
+
+        try:
+            with self._fast_lock:
+                model = self._get_fast_encoder(tier)
+                vectors = model.encode(texts, show_progress_bar=False)
+            return {"ok": True, "vectors": np.asarray(vectors, dtype=np.float32)}
+        except Exception:
+            log.warning(
+                "Fast-lane CPU encode failed — falling back to the main "
+                "embed path", exc_info=True,
+            )
+            return None
+
     def handle_request(self, request: dict) -> dict:
         with self._activity_lock:
             self._last_activity = time.time()
@@ -273,6 +345,13 @@ class ModelServer:
         if op == "embed":
             texts = request["texts"]
             tier = request.get("tier", "")
+
+            # Single-text fast lane (issue #577): hook recall queries must
+            # never queue behind batch ingestion work or OOM recovery.
+            if len(texts) <= self._FAST_LANE_MAX_TEXTS:
+                fast = self._handle_fast_embed(texts, tier)
+                if fast is not None:
+                    return fast
 
             now = time.time()
             with self._lock:
@@ -601,6 +680,7 @@ class ModelServer:
                 pass
         self._embed_model = None
         self._reranker = None
+        self._fast_encoder = None
         self._token = None
         gc.collect()
         log.info("Model server stopped")

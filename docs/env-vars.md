@@ -54,6 +54,7 @@ All TrueMemory environment variables and their defaults.
 | `TRUEMEMORY_BUFFER_RETENTION_DAYS` | `7` | Days to keep diagnostic buffer files |
 | `TRUEMEMORY_BUFFER_MAX_BYTES` | `10485760` | Max buffer file size before rotation (10 MB) |
 | `TRUEMEMORY_RECALL_DEBOUNCE_SECONDS` | `60` | Window after SessionStart recall during which the first prompt's auto-recall is skipped (`0` or negative disables) |
+| `TRUEMEMORY_HOOK_RECALL_TIMEOUT` | `5` | Per-request model-server deadline (seconds) for hook recall searches. On expiry the search falls back to FTS-only retrieval instead of blocking the hook. `0` or negative disables (legacy 120s behavior) |
 
 ## Directories
 
