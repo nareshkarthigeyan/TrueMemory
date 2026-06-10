@@ -683,17 +683,21 @@ def delete_message(conn: sqlite3.Connection, msg_id: int) -> bool:
     """
     # Delete child rows BEFORE the parent to avoid FK violations on
     # databases created before ON DELETE CASCADE was added to the schema.
-    for tbl in (
-        "vec_messages", "vec_messages_edge", "vec_messages_basepro",
-    ):
-        try:
-            conn.execute(f"DELETE FROM {tbl} WHERE rowid = ?", (msg_id,))
-        except sqlite3.OperationalError:
-            pass
-    for tbl in (
-        "vec_messages_sep", "vec_messages_sep_edge",
-        "vec_messages_sep_basepro",
-    ):
+    #
+    # The vector tables are derived from the tier groups instead of being
+    # hardcoded: the old explicit list missed the `custom` tier group, which
+    # orphaned embeddings in vec_messages_custom / vec_messages_sep_custom on
+    # delete (issue #589, D-6). Tables that don't exist on a given install
+    # are skipped via the OperationalError guard.
+    from truememory.tier_config import VALID_TIER_GROUPS
+
+    vec_tables = ["vec_messages"] + [
+        f"vec_messages_{group}" for group in sorted(VALID_TIER_GROUPS)
+    ]
+    sep_tables = ["vec_messages_sep"] + [
+        f"vec_messages_sep_{group}" for group in sorted(VALID_TIER_GROUPS)
+    ]
+    for tbl in (*vec_tables, *sep_tables):
         try:
             conn.execute(f"DELETE FROM {tbl} WHERE rowid = ?", (msg_id,))
         except sqlite3.OperationalError:
