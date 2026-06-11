@@ -49,7 +49,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from truememory.storage import _deserialize_metadata
+from truememory.storage import _deserialize_metadata, select_message_cols
 
 if TYPE_CHECKING:
     pass
@@ -711,8 +711,7 @@ def search_vector(
     rows = conn.execute(
         f"""
         SELECT v.rowid, v.distance,
-               m.content, m.sender, m.recipient,
-               m.timestamp, m.category, m.modality, m.directive, m.metadata
+               {select_message_cols(conn, alias='m')}
         FROM (
             SELECT rowid, distance
             FROM {tbl}
@@ -727,7 +726,7 @@ def search_vector(
     results: list[dict] = []
     for row in rows:
         # Exclude directives by default
-        if not include_directives and row[8]:
+        if not include_directives and row[9]:
             continue
 
         distance = row[1]
@@ -736,14 +735,14 @@ def search_vector(
         results.append(
             {
                 "id": row[0],
-                "content": row[2],
-                "sender": row[3],
-                "recipient": row[4],
-                "timestamp": row[5],
-                "category": row[6],
-                "modality": row[7],
-                "directive": bool(row[8]),
-                "metadata": _deserialize_metadata(row[9]),
+                "content": row[3],
+                "sender": row[4],
+                "recipient": row[5],
+                "timestamp": row[6],
+                "category": row[7],
+                "modality": row[8],
+                "directive": bool(row[9]),
+                "metadata": _deserialize_metadata(row[10]),
                 "score": round(score, 6),
             }
         )
@@ -774,8 +773,7 @@ def search_vector_raw(
     rows = conn.execute(
         f"""
         SELECT v.rowid, v.distance,
-               m.content, m.sender, m.recipient,
-               m.timestamp, m.category, m.modality, m.directive, m.metadata
+               {select_message_cols(conn, alias='m')}
         FROM (
             SELECT rowid, distance
             FROM {tbl}
@@ -789,7 +787,7 @@ def search_vector_raw(
 
     results: list[dict] = []
     for row in rows:
-        if not include_directives and row[8]:
+        if not include_directives and row[9]:
             continue
 
         distance = row[1]
@@ -798,14 +796,14 @@ def search_vector_raw(
         results.append(
             {
                 "id": row[0],
-                "content": row[2],
-                "sender": row[3],
-                "recipient": row[4],
-                "timestamp": row[5],
-                "category": row[6],
-                "modality": row[7],
-                "directive": bool(row[8]),
-                "metadata": _deserialize_metadata(row[9]),
+                "content": row[3],
+                "sender": row[4],
+                "recipient": row[5],
+                "timestamp": row[6],
+                "category": row[7],
+                "modality": row[8],
+                "directive": bool(row[9]),
+                "metadata": _deserialize_metadata(row[10]),
                 "score": round(cos_sim, 6),
             }
         )
@@ -999,8 +997,7 @@ def search_vector_separation(
     rows = conn.execute(
         f"""
         SELECT v.rowid, v.distance,
-               m.content, m.sender, m.recipient,
-               m.timestamp, m.category, m.modality, m.directive, m.metadata
+               {select_message_cols(conn, alias='m')}
         FROM (
             SELECT rowid, distance
             FROM {sep_tbl}
@@ -1014,21 +1011,21 @@ def search_vector_separation(
 
     results: list[dict] = []
     for row in rows:
-        if not include_directives and row[8]:
+        if not include_directives and row[9]:
             continue
 
         distance = row[1]
         score = 1.0 / (1.0 + distance)
         results.append({
             "id": row[0],
-            "content": row[2],
-            "sender": row[3],
-            "recipient": row[4],
-            "timestamp": row[5],
-            "category": row[6],
-            "modality": row[7],
-            "directive": bool(row[8]),
-            "metadata": _deserialize_metadata(row[9]),
+            "content": row[3],
+            "sender": row[4],
+            "recipient": row[5],
+            "timestamp": row[6],
+            "category": row[7],
+            "modality": row[8],
+            "directive": bool(row[9]),
+            "metadata": _deserialize_metadata(row[10]),
             "score": round(score, 6),
         })
 

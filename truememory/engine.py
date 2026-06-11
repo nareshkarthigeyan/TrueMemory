@@ -1114,16 +1114,17 @@ class TrueMemoryEngine:
             List of memory dicts.
         """
         self._ensure_connection()
-        from truememory.storage import _SELECT_COLS, _row_to_dict
+        from truememory.storage import _row_to_dict, select_message_cols
+        select_cols = select_message_cols(self.conn)
 
         if user_id:
             rows = self.conn.execute(
-                f"SELECT {_SELECT_COLS} FROM messages WHERE sender = ? ORDER BY id DESC LIMIT ? OFFSET ?",
+                f"SELECT {select_cols} FROM messages WHERE sender = ? ORDER BY id DESC LIMIT ? OFFSET ?",
                 (user_id, limit, offset),
             ).fetchall()
         else:
             rows = self.conn.execute(
-                f"SELECT {_SELECT_COLS} FROM messages ORDER BY id DESC LIMIT ? OFFSET ?",
+                f"SELECT {select_cols} FROM messages ORDER BY id DESC LIMIT ? OFFSET ?",
                 (limit, offset),
             ).fetchall()
 

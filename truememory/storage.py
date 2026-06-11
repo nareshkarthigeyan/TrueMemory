@@ -575,6 +575,56 @@ def _row_to_dict(row: tuple) -> dict:
 
 
 _SELECT_COLS = "id, content, sender, recipient, timestamp, category, modality, directive, metadata"
+_OPTIONAL_SELECT_DEFAULTS = {
+    "sender": "''",
+    "recipient": "''",
+    "timestamp": "''",
+    "category": "''",
+    "modality": "''",
+    "directive": "0",
+    "metadata": "'{}'",
+}
+
+
+def _message_columns(conn: sqlite3.Connection) -> set[str]:
+    """Return column names for messages, or an empty set on bad schemas."""
+    try:
+        return {row[1] for row in conn.execute("PRAGMA table_info(messages)").fetchall()}
+    except sqlite3.OperationalError:
+        return set()
+
+
+def select_message_cols(conn: sqlite3.Connection, alias: str = "") -> str:
+    """Build the stable message SELECT list, defaulting missing optional columns.
+
+    Some tests and old user databases create a minimal ``messages`` table by
+    hand. Query code should still return the same dict shape rather than
+    failing on newly-added optional columns such as ``metadata``.
+    """
+    existing = _message_columns(conn)
+    prefix = f"{alias}." if alias else ""
+    cols = []
+    for name in (
+        "id", "content", "sender", "recipient", "timestamp",
+        "category", "modality", "directive", "metadata",
+    ):
+        if name in existing or name not in _OPTIONAL_SELECT_DEFAULTS:
+            cols.append(f"{prefix}{name}")
+        else:
+            cols.append(f"{_OPTIONAL_SELECT_DEFAULTS[name]} AS {name}")
+    return ", ".join(cols)
+
+
+def directive_filter_sql(
+    conn: sqlite3.Connection,
+    alias: str = "",
+    include_directives: bool = False,
+) -> str:
+    """Return a WHERE fragment that excludes directives when possible."""
+    if include_directives or "directive" not in _message_columns(conn):
+        return ""
+    prefix = f"{alias}." if alias else ""
+    return f" AND ({prefix}directive = 0 OR {prefix}directive IS NULL)"
 
 
 def get_message(conn: sqlite3.Connection, msg_id: int) -> dict | None:
@@ -589,7 +639,7 @@ def get_message(conn: sqlite3.Connection, msg_id: int) -> dict | None:
         Message dict, or ``None`` if not found.
     """
     row = conn.execute(
-        f"SELECT {_SELECT_COLS} FROM messages WHERE id = ?", (msg_id,)
+        f"SELECT {select_message_cols(conn)} FROM messages WHERE id = ?", (msg_id,)
     ).fetchone()
     return _row_to_dict(row) if row else None
 
@@ -606,7 +656,7 @@ def get_messages_by_sender(conn: sqlite3.Connection, sender: str) -> list[dict]:
         List of message dicts.
     """
     rows = conn.execute(
-        f"SELECT {_SELECT_COLS} FROM messages WHERE sender = ? ORDER BY timestamp",
+        f"SELECT {select_message_cols(conn)} FROM messages WHERE sender = ? ORDER BY timestamp",
         (sender,),
     ).fetchall()
     return [_row_to_dict(r) for r in rows]
@@ -643,7 +693,7 @@ def get_messages_in_range(
 
     where = f" WHERE {' AND '.join(clauses)}" if clauses else ""
     rows = conn.execute(
-        f"SELECT {_SELECT_COLS} FROM messages{where} ORDER BY timestamp",
+        f"SELECT {select_message_cols(conn)} FROM messages{where} ORDER BY timestamp",
         params,
     ).fetchall()
     return [_row_to_dict(r) for r in rows]
